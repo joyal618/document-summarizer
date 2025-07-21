@@ -17,7 +17,7 @@ function App() {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
       if (selectedFile.type === "application/pdf" ||
-          selectedFile.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+        selectedFile.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
         setFile(selectedFile);
         setFileName(selectedFile.name);
         setFileType(selectedFile.type);
@@ -29,7 +29,7 @@ function App() {
         setFileName('');
         setFileType('');
         if (fileInputRef.current) {
-            fileInputRef.current.value = '';
+          fileInputRef.current.value = '';
         }
       }
     }
@@ -42,53 +42,57 @@ function App() {
     setSummary('');
     setError('');
     if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+      fileInputRef.current.value = '';
     }
   };
 
- const handleUpload = async () => {
-  if (!file) {
-    setError('Please select a file to summarize.');
-    return;
-  }
-
-  setLoading(true);
-  setSummary('');
-  setError('');
-
-  const apiUrl = import.meta.env.VITE_API_URL;
-  if (!apiUrl) {
-    setError('API endpoint is not configured');
-    setLoading(false);
-    return;
-  }
-
-  const formData = new FormData();
-  formData.append('file', file);
-
-  try {
-    const response = await axios.post(`${apiUrl}/upload`, formData, {});
-    setSummary(response.data.summary);
-  } catch (err) {
-    console.error('Upload error:', err);
-    if (err.response) {
-      if (err.response.status === 400) {
-        setError(err.response.data || 'Unsupported file type or empty content.');
-      } else if (err.response.status === 500) {
-        setError('Server error: Could not process the file. Please try again.');
-      } else {
-        setError(`An unexpected error occurred: ${err.response.status} - ${err.response.statusText}`);
-      }
-    } else if (err.request) {
-      setError('No response from server. Please check your network connection or server status.');
-    } else {
-      setError('An unknown error occurred while preparing the request.');
+  const handleUpload = async () => {
+    if (!file) {
+      setError('Please select a file to summarize.');
+      return;
     }
+
+    setLoading(true);
     setSummary('');
-  } finally {
-    setLoading(false);
-  }
-};
+    setError('');
+
+    const apiUrl = import.meta.env.VITE_API_URL;
+    if (!apiUrl) {
+      setError('API endpoint is not configured');
+      setLoading(false);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await axios.post(`${apiUrl}/upload`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      setSummary(response.data.summary);
+    } catch (err) {
+      console.error('Upload error:', err);
+      if (err.response) {
+        if (err.response.status === 400) {
+          setError(err.response.data || 'Unsupported file type or empty content.');
+        } else if (err.response.status === 500) {
+          setError('Server error: Could not process the file. Please try again.');
+        } else {
+          setError(`An unexpected error occurred: ${err.response.status} - ${err.response.statusText}`);
+        }
+      } else if (err.request) {
+        setError('No response from server. Please check your network connection or server status.');
+      } else {
+        setError('An unknown error occurred while preparing the request.');
+      }
+      setSummary('');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 sm:p-6 lg:p-8 flex items-center justify-center">
