@@ -7,7 +7,7 @@ const cors = require("cors");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
-const upload = multer({ storage: multer.memoryStorage() }); // Use memory storage instead of disk
+const upload = multer({ storage: multer.memoryStorage() }); 
 const geminiApiKey = process.env.GEMINI_API_KEY;
 
 if (!geminiApiKey) {
@@ -53,7 +53,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
     }
 
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const prompt = `Summarize this document concisely in 3-5 bullet points:\n\n${text.substring(0, 30000)}`; // Limit input size
+    const prompt = `Summarize this document concisely in 3-5 bullet points:\n\n${text.substring(0, 30000)}`; 
     
     const result = await model.generateContent(prompt);
     const response = await result.response;
