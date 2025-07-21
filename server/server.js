@@ -17,10 +17,16 @@ if (!geminiApiKey) {
 
 const genAI = new GoogleGenerativeAI(geminiApiKey);
 
-// Configure CORS properly
+// Enable CORS for all routes
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:5173",
-  optionsSuccessStatus: 200
+  origin: [
+    'http://localhost:5173',
+    'https://document-summarizer-five.vercel.app',
+    'https://document-summarizer-production.up.railway.app'
+  ],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 
 app.use(express.json());
