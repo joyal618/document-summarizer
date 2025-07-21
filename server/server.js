@@ -7,66 +7,53 @@ const cors = require("cors");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
-const upload = multer({ storage: multer.memoryStorage() });
-const PORT = process.env.PORT || 5000;
+const upload = multer({ storage: multer.memoryStorage() }); // Use memory storage instead of disk
+const geminiApiKey = process.env.GEMINI_API_KEY;
 
-// Validate critical environment variables
-const requiredEnvVars = ["GEMINI_API_KEY"];
-for (const varName of requiredEnvVars) {
-  if (!process.env[varName]) {
-    console.error(`Missing required environment variable: ${varName}`);
-    process.exit(1);
-  }
+if (!geminiApiKey) {
+  console.error("Missing GEMINI_API_KEY environment variable");
+  process.exit(1);
 }
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenerativeAI(geminiApiKey);
 
-// Enhanced CORS configuration
-const corsOptions = {
+// Configure CORS properly
+app.use(cors({
   origin: process.env.FRONTEND_URL || "http://localhost:5173",
-  methods: ["POST"],
-  allowedHeaders: ["Content-Type"]
-};
-app.use(cors(corsOptions));
+  optionsSuccessStatus: 200
+}));
 
-// Health check endpoint
-app.get("/health", (req, res) => {
-  res.status(200).json({ status: "healthy" });
-});
+app.use(express.json());
 
 app.post("/upload", upload.single("file"), async (req, res) => {
   try {
-    console.log("Upload request received"); // Debug log
-    
     if (!req.file) {
-      console.log("No file in request"); // Debug log
       return res.status(400).json({ error: "No file uploaded" });
     }
 
-    console.log(`Processing ${req.file.mimetype} file`); // Debug log
-
     let text = "";
-    try {
-      if (req.file.mimetype === "application/pdf") {
-        const pdfData = await pdfParse(req.file.buffer);
-        text = pdfData.text;
-      } else if (req.file.mimetype.includes("wordprocessingml.document")) {
-        const result = await mammoth.extractRawText({ buffer: req.file.buffer });
-        text = result.value;
-      } else {
-        return res.status(400).json({ error: "Unsupported file type" });
-      }
-    } catch (parseError) {
-      console.error("File parsing error:", parseError);
-      return res.status(400).json({ error: "Error parsing document" });
+
+    if (req.file.mimetype === "application/pdf") {
+      const pdfData = await pdfParse(req.file.buffer);
+      text = pdfData.text;
+    } else if (
+      req.file.mimetype ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ) {
+      const result = await mammoth.extractRawText({ buffer: req.file.buffer });
+      text = result.value;
+    } else {
+      return res.status(400).json({ error: "Unsupported file type" });
     }
 
-    if (!text.trim()) {
-      return res.status(400).json({ error: "Empty document content" });
+    if (!text || text.trim().length === 0) {
+      return res.status(400).json({ 
+        error: "Could not extract text from document" 
+      });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-    const prompt = `Summarize this document concisely:\n\n${text.substring(0, 30000)}`;
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const prompt = `Summarize this document concisely in 3-5 bullet points:\n\n${text.substring(0, 30000)}`; // Limit input size
     
     const result = await model.generateContent(prompt);
     const response = await result.response;
@@ -74,15 +61,13 @@ app.post("/upload", upload.single("file"), async (req, res) => {
 
     res.json({ summary });
   } catch (err) {
-    console.error("Server error:", err);
+    console.error("Error:", err);
     res.status(500).json({ 
-      error: "Internal server error",
-      details: process.env.NODE_ENV === "development" ? err.message : undefined
+      error: "Error processing file",
+      details: err.message 
     });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`CORS configured for: ${corsOptions.origin}`);
-});
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
