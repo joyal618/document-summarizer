@@ -46,42 +46,49 @@ function App() {
     }
   };
 
-  const handleUpload = async () => {
-    if (!file) {
-      setError('Please select a file to summarize.');
-      return;
-    }
+ const handleUpload = async () => {
+  if (!file) {
+    setError('Please select a file to summarize.');
+    return;
+  }
 
-    setLoading(true);
-    setSummary('');
-    setError('');
+  setLoading(true);
+  setSummary('');
+  setError('');
 
-    const formData = new FormData();
-    formData.append('file', file);
+  const apiUrl = import.meta.env.VITE_API_URL;
+  if (!apiUrl) {
+    setError('API endpoint is not configured');
+    setLoading(false);
+    return;
+  }
 
-    try {
-      const response = await axios.post('http://localhost:5000/upload', formData, {});
-      setSummary(response.data.summary);
-    } catch (err) {
-      console.error('Upload error:', err);
-      if (err.response) {
-        if (err.response.status === 400) {
-          setError(err.response.data || 'Unsupported file type or empty content.');
-        } else if (err.response.status === 500) {
-          setError('Server error: Could not process the file. Please try again.');
-        } else {
-          setError(`An unexpected error occurred: ${err.response.status} - ${err.response.statusText}`);
-        }
-      } else if (err.request) {
-        setError('No response from server. Please check your network connection or server status.');
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const response = await axios.post(`${apiUrl}/upload`, formData, {});
+    setSummary(response.data.summary);
+  } catch (err) {
+    console.error('Upload error:', err);
+    if (err.response) {
+      if (err.response.status === 400) {
+        setError(err.response.data || 'Unsupported file type or empty content.');
+      } else if (err.response.status === 500) {
+        setError('Server error: Could not process the file. Please try again.');
       } else {
-        setError('An unknown error occurred while preparing the request.');
+        setError(`An unexpected error occurred: ${err.response.status} - ${err.response.statusText}`);
       }
-      setSummary('');
-    } finally {
-      setLoading(false);
+    } else if (err.request) {
+      setError('No response from server. Please check your network connection or server status.');
+    } else {
+      setError('An unknown error occurred while preparing the request.');
     }
-  };
+    setSummary('');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 sm:p-6 lg:p-8 flex items-center justify-center">
